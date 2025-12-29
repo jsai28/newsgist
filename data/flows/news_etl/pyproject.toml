@@ -1,0 +1,13 @@
+[project]
+name = "news_etl"
+version = "0.1.0"
+description = "News ETL package"
+readme = "README.md"
+requires-python = "==3.13.1"
+dependencies = [
+    "prefect==3.6.7",
+    "common",
+]
+
+[tool.uv.sources]
+common = { workspace = true }
