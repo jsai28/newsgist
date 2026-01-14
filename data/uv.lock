@@ -5,7 +5,6 @@ requires-python = "==3.13.1"
 members = [
     "common",
     "data",
-    "deploy",
     "news-etl",
 ]
 
@@ -316,11 +315,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/a9/30/064144f0df1749e7b
 wheels = [
     { url = "https://files.pythonhosted.org/packages/87/22/f020c047ae1346613db9322638186468238bcfa8849b4668a22b97faad65/dateparser-1.2.2-py3-none-any.whl", hash = "sha256:5a5d7211a09013499867547023a2a0c91d5a27d15dd4dbcea676ea9fe66f2482", size = 315453 },
 ]
-
-[[package]]
-name = "deploy"
-version = "0.1.0"
-source = { virtual = "deploy" }
 
 [[package]]
 name = "docker"
@@ -697,14 +691,10 @@ version = "0.1.0"
 source = { virtual = "flows/news_etl" }
 dependencies = [
     { name = "common" },
-    { name = "prefect" },
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "common", virtual = "common" },
-    { name = "prefect", specifier = ">=3.6.7" },
-]
+requires-dist = [{ name = "common", virtual = "common" }]
 
 [[package]]
 name = "oauthlib"

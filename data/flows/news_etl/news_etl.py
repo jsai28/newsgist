@@ -3,7 +3,6 @@ from datetime import timedelta
 import requests
 import os
 
-from deploy import registry
 from common.utils import announce_news
 
 @task
@@ -17,7 +16,6 @@ def fetch_top_news():
     url = f"https://gnews.io/api/v4/top-headlines?category=general&apikey={api_key}"
     return requests.get(url).json()
 
-@registry(cron="*/5 * * * *")
 @flow(name="news_etl", log_prints=True)
 def news_etl():
     logger = get_run_logger()

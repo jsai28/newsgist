@@ -1,35 +1,36 @@
-# Welcome to your prefect.yaml file! You can use this file for storing and managing
-# configuration for deploying your flows. We recommend committing this file to source
-# control along with your flow code.
+# Prefect deployment configuration
+# Usage: make deploy ENV=local or make deploy ENV=prod
 
-# Generic metadata about this project
 name: newsgest
-prefect-version: 3.6.7
 
-# build section allows you to manage and build docker images
-build: null
+# Build configuration for Docker deployments
+build:
+  - prefect_docker.deployments.steps.build_docker_image:
+      id: build-image
+      requires: prefect-docker>=0.6.0
+      dockerfile: Dockerfile
+      image_name: "{{ $DOCKER_REGISTRY | default('') }}newsgest-flows"
+      tag: "{{ $IMAGE_TAG | default('latest') }}"
+      push: "{{ $PUSH_IMAGE | default('false') }}"
 
-# push section allows you to manage if and how this project is uploaded to remote locations
-push: null
+# Push step (only used in production)
+push:
+  - prefect_docker.deployments.steps.push_docker_image:
+      requires: prefect-docker>=0.6.0
+      image_name: "{{ build-image.image_name }}"
+      tag: "{{ build-image.tag }}"
 
-# pull section allows you to provide instructions for cloning this project in remote locations
-pull:
-- prefect.deployments.steps.git_clone:
-    repository: '{{ repository }}'
-    branch: '{{ branch }}'
-    access_token: null
-
-# the deployments section allows you to provide configuration for deploying flows
+# Deployments
 deployments:
-- name: null
-  version: null
-  tags: []
-  description: null
-  schedule: {}
-  flow_name: null
-  entrypoint: null
-  parameters: {}
-  work_pool:
-    name: null
-    work_queue_name: null
-    job_variables: {}
+  - name: news-etl
+    description: "Fetches top news headlines and processes them"
+    entrypoint: flows/news_etl/news_etl.py:news_etl
+    work_pool:
+      name: "{{ $PREFECT_WORK_POOL | default('local-docker-pool') }}"
+    build: "{{ $BUILD_STEPS | default('') }}"
+    push: null
+    schedules: []
+    parameters: {}
+    tags:
+      - news
+      - etl

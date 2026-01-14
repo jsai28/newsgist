@@ -5,7 +5,6 @@ description = "News ETL package"
 readme = "README.md"
 requires-python = "==3.13.1"
 dependencies = [
-    "prefect==3.6.7",
     "common",
 ]
 
