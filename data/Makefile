@@ -21,3 +21,11 @@ logs:
 
 reset:
 	$(COMPOSE) down -v
+
+deploy:
+ifndef ENV
+	$(error ENV is required. Usage: make deploy ENV=local)
+endif
+ifeq ($(ENV),local)
+	PREFECT_API_URL=$(PREFECT_SERVER) uv run prefect deploy --all
+endif
