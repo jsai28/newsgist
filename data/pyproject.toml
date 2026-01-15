@@ -6,7 +6,8 @@ readme = "README.md"
 requires-python = "==3.13.1"
 dependencies = [
     "prefect==3.6.7",
+    "prefect-docker>=0.7.0",
 ]
 
 [tool.uv.workspace]
-members = ["common", "flows/*", "deploy"]
+members = ["common", "flows/*"]

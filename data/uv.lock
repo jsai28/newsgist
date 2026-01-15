@@ -296,10 +296,14 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "prefect" },
+    { name = "prefect-docker" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "prefect", specifier = "==3.6.7" }]
+requires-dist = [
+    { name = "prefect", specifier = "==3.6.7" },
+    { name = "prefect-docker", specifier = ">=0.7.0" },
+]
 
 [[package]]
 name = "dateparser"
@@ -886,6 +890,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/0e/d4/610f0a5dbe5d5d219e2a6c4272887fa3f54e4c7886b27ddb82721e821d19/prefect-3.6.7.tar.gz", hash = "sha256:e78c39a8fa9d899047b2d888768f52806baec098392eaa982fb66ad00300e1e4", size = 5652431 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/59/3d/68243e3e219d765a3012a1e396b3ea8566c3ea2b60283e27327c0f4415e9/prefect-3.6.7-py3-none-any.whl", hash = "sha256:9953b690b340d8f79eaff776fe8a2b714e1055e54116b00177f906cd76cd760d", size = 6181057 },
+]
+
+[[package]]
+name = "prefect-docker"
+version = "0.7.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "docker" },
+    { name = "exceptiongroup" },
+    { name = "prefect" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b2/dc/d340e4e4dcb80969ad85e9fc8d8f6c35d9658da931cd4c729f64019b74d4/prefect_docker-0.7.0.tar.gz", hash = "sha256:a35b79049fc963610248e776b770f10c76231fb5047b82510911d5ac630d4339", size = 39867 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/dc/63/73397e7fcd2450e682fdacf3a1eb243b0e4bd6875f478836a4dda6769b45/prefect_docker-0.7.0-py3-none-any.whl", hash = "sha256:2547530fc99b4d849a1c28334c4af03af03ddfd1ef463f851c4ef64679c993f4", size = 27800 },
 ]
 
 [[package]]
@@ -1527,6 +1545,8 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/b8/11/1c8c65d816c33b8b2be4b9800a09ecb169e8ebdae2a3084600599d0a49dc/whenever-0.9.4-cp313-cp313-musllinux_1_2_armv7l.whl", hash = "sha256:056d8e6eccdf9bf43cdb7986eea61533cf16189dd1c6e66f962e95ec3bcbba15", size = 776454 },
     { url = "https://files.pythonhosted.org/packages/62/b4/5b917499b8e629f93e820d7e8cfda682389cfe4878a37e084a3eca8dd8a2/whenever-0.9.4-cp313-cp313-musllinux_1_2_i686.whl", hash = "sha256:fcf0c8ad2464986ee27b7b516170f8904d0928d48105e2ce7623384900764e86", size = 739971 },
     { url = "https://files.pythonhosted.org/packages/d6/02/ef4404a442184ff8bb5176e946749a2788bff1055573dfc3cd25a015034c/whenever-0.9.4-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:bf6e4a79f4d491a7f757f6a4f69a3f47cf572c9afc63b2fa69b1582ca49c00ff", size = 698639 },
+    { url = "https://files.pythonhosted.org/packages/7e/b7/cbd377837431cee9a35b26277858ee27e44ea745ea3c73e46b54df12a020/whenever-0.9.4-cp313-cp313-win32.whl", hash = "sha256:73972a32c5712cbcbb9f5fdea27d06fd4092ce5cab906d609a54fbeee4a01b9c", size = 416114 },
+    { url = "https://files.pythonhosted.org/packages/b3/b9/3bf77080ff29fc5615c5f9e26fb86b3cd0f76db8606f52d6b25a5117cbc4/whenever-0.9.4-cp313-cp313-win_amd64.whl", hash = "sha256:54482cc1a95c1eee88532b4eb59c89bfdae12f41478b0f7b6f0f4f01edd524ac", size = 440446 },
     { url = "https://files.pythonhosted.org/packages/a0/af/de30633ba49b6c98c47cde278245e6d67d95cb6508c33112bfed24de2c26/whenever-0.9.4-cp313-cp313t-macosx_10_12_x86_64.whl", hash = "sha256:7a6ee0313519145b5b541407f0df0f889b36e7e55e887cfe3486c35a28edd757", size = 465302 },
     { url = "https://files.pythonhosted.org/packages/88/6a/393d26796020ce43fb4d1db7702f28668723609af8f73682208d80571f90/whenever-0.9.4-cp313-cp313t-macosx_11_0_arm64.whl", hash = "sha256:5db3d96356b33f76dbbcd646092eeac2906326c4d3dbde880cc196409026c7ec", size = 441218 },
     { url = "https://files.pythonhosted.org/packages/51/e6/10d56f4989ef0dd8b46106da769ffd99184ff16dd136ebe4a7b0a5b55308/whenever-0.9.4-cp313-cp313t-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:ff4bd0abc8ded80b9db7bc3aceb9cf418128e2c6191455ad9e50fddb2849b6b7", size = 459116 },

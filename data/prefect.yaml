@@ -1,34 +1,37 @@
-# Prefect deployment configuration
-# Usage: make deploy ENV=local or make deploy ENV=prod
+# Prefect Local Deployment Configuration
+# Usage: prefect deploy --all
 
 name: newsgest
 
-# Build configuration for Docker deployments
+# Build the Docker image locally
 build:
   - prefect_docker.deployments.steps.build_docker_image:
       id: build-image
       requires: prefect-docker>=0.6.0
       dockerfile: Dockerfile
-      image_name: "{{ $DOCKER_REGISTRY | default('') }}newsgest-flows"
-      tag: "{{ $IMAGE_TAG | default('latest') }}"
-      push: "{{ $PUSH_IMAGE | default('false') }}"
+      image_name: newsgest-flows
+      tag: latest
 
-# Push step (only used in production)
-push:
-  - prefect_docker.deployments.steps.push_docker_image:
-      requires: prefect-docker>=0.6.0
-      image_name: "{{ build-image.image_name }}"
-      tag: "{{ build-image.tag }}"
+# No push for local deployment
+push: null
 
-# Deployments
+# Pull configuration - use the locally built image
+pull:
+  - prefect.deployments.steps.set_working_directory:
+      directory: /app
+
 deployments:
   - name: news-etl
     description: "Fetches top news headlines and processes them"
     entrypoint: flows/news_etl/news_etl.py:news_etl
     work_pool:
-      name: "{{ $PREFECT_WORK_POOL | default('local-docker-pool') }}"
-    build: "{{ $BUILD_STEPS | default('') }}"
-    push: null
+      name: local-docker-pool
+      job_variables:
+        image: "{{ build-image.image }}"
+        image_pull_policy: Never
+        env:
+          NEWS_API_KEY: "{{ $NEWS_API_KEY }}"
+          PREFECT_API_URL: "http://host.docker.internal:4200/api"
     schedules: []
     parameters: {}
     tags:
