@@ -1,9 +1,8 @@
 # Prefect Deployment Configuration
-# Usage: make deploy ENV=local
+# Usage: make deploy-local | make deploy-prod
 
 name: newsgest
 
-# No push for local deployment
 push: null
 
 pull:
