@@ -30,6 +30,7 @@ reset:
 deploy-local:
 	PREFECT_API_URL=$(PREFECT_SERVER) uv run prefect deploy --all \
 		--pool $(POOL_NAME) \
+		--job-variable 'image={{ build-image.image }}' \
 		--job-variable image_pull_policy=Never \
 		--job-variable env.PREFECT_API_URL=$(PREFECT_SERVER_DOCKER)
 

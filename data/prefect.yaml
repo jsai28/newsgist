@@ -22,14 +22,6 @@ deployments:
           tag: latest
           buildargs:
             FLOW_NAME: news_etl
-    work_pool:
-      name: "local-docker-pool"
-      job_variables:
-        image: "{{ build-image.image }}"
-        image_pull_policy: Never
-        auto_remove: true
-        env:
-          PREFECT_API_URL: "http://host.docker.internal:4200/api"
     schedules: []
     parameters: {}
     tags:
