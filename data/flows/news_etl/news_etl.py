@@ -1,7 +1,7 @@
 from prefect import flow, task, get_run_logger
+from prefect.blocks.system import Secret
 from datetime import timedelta
 import requests
-import os
 
 from common.utils import announce_news
 
@@ -12,7 +12,7 @@ def format_headlines(headlines):
 
 @task(retries=3, log_prints=True)
 def fetch_top_news():
-    api_key = os.getenv("NEWS_API_KEY")
+    api_key = Secret.load("news-api-key").get()
     url = f"https://gnews.io/api/v4/top-headlines?category=general&apikey={api_key}"
     return requests.get(url).json()
 
