@@ -1,4 +1,4 @@
-# Newsgest
+# Newsgist
 
 A news aggregation and summarization pipeline that fetches articles from Canadian news sources, clusters related stories, and generates AI-powered summaries.
 
