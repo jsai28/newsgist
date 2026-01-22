@@ -1,26 +1,18 @@
-CREATE TABLE IF NOT EXISTS bronze_news_data (
-  id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,,
-  received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  payload JSONB NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS silver_news_data (
-  id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  article_date DATE NOT NULL,
-  author VARCHAR(255),
-  title TEXT NOT NULL,
-  url TEXT UNIQUE
-);
-CREATE INDEX idx_article_date ON silver_news_data(article_date);
-
-CREATE TABLE IF NOT EXISTS gold_summaries (
-  id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,,
-  silver_id INTEGER UNIQUE REFERENCES silver_news_data(id) ON DELETE CASCADE,
+CREATE TABLE IF NOT EXISTS summaries (
+  id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   summary TEXT,
-  word_count INTEGER,
-  read_time_minutes INTEGER,
-  model_used VARCHAR(50),
-  url_archive TEXT,
+  cluster_id INT,
   processed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-)
+);
+
+CREATE TABLE IF NOT EXISTS articles (
+  id SERIAL PRIMARY KEY,
+  url TEXT UNIQUE NOT NULL,
+  title TEXT,
+  date TIMESTAMP,
+  summary_id INT REFERENCES summaries(id),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_summaries_processed_at ON summaries(processed_at);
+CREATE INDEX idx_articles_summary_id ON articles(summary_id);

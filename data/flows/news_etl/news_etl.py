@@ -10,6 +10,8 @@ import random
 from collections import defaultdict
 from google import genai
 from prefect.blocks.system import Secret
+import psycopg2
+from psycopg2.extras import Json
 
 SOURCES = [
     'cbc.ca',
@@ -84,7 +86,22 @@ def fetch_gdelt_articles(max_records: int = 250) -> dict:
     response.raise_for_status()
     data = response.json()
     articles = data.get("articles", [])
+    logger.info(f"Retrieved {len(articles)} articles")
     return articles
+
+
+@task(retries=2, log_prints=True)
+def deduplicate_articles(articles: list) -> list:
+    logger = get_run_logger()
+    seen = set()
+    unique = []
+    for a in articles:
+        if a.get("url") not in seen:
+            unique.append(a)
+            seen.add(a['url'])
+
+    logger.info(f"Fetched {len(unique)} unique articles ({len(articles) - len(unique)} duplicates removed)")
+    return unique
 
 
 @task(retries=2, log_prints=True)
@@ -106,10 +123,7 @@ def extract_text(articles: list) -> list[dict]:
                 "url": url,
                 "title": article.title,
                 "text": article.text,
-                "authors": article.authors,
                 "publish_date": article.publish_date,
-                "source_domain": article_meta.get("domain"),
-                "gdelt_title": article_meta.get("title"),
             })
 
         except Exception as e:
@@ -207,17 +221,53 @@ def summarize_clusters(clusters: dict[str, dict], max_clusters: int = 10) -> lis
     return summaries
 
 
+@task(retries=2, log_prints=True)
+def save_to_db(summaries: list) -> None:
+    logger = get_run_logger()
+
+    conn_string = Secret.load("neon-connection-string").get()
+    conn = psycopg2.connect(conn_string)
+    cur = conn.cursor()
+
+    for summary in summaries:
+        cur.execute(
+            """
+            INSERT INTO summaries (summary, cluster_id)
+            VALUES (%s, %s)
+            RETURNING id
+            """,
+            (summary["summary"], summary["cluster_id"])
+        )
+        summary_id = cur.fetchone()[0]
+
+        for article in summary["sampled_articles"]:
+            cur.execute(
+                """
+                INSERT INTO articles (url, title, date, summary_id)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (url) DO UPDATE SET summary_id = %s
+                """,
+                (article["url"], article["title"], article.get("publish_date"), summary_id, summary_id)
+            )
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    logger.info(f"Saved {len(summaries)} summaries to database")
+
+
 @flow(name="news_etl", log_prints=True)
 def news_etl():
     logger = get_run_logger()
 
     articles = fetch_gdelt_articles()
-    logger.info(f"Retrieved {len(articles)} articles")
-
-    extracted = extract_text(articles)
+    deduped_articles = deduplicate_articles(articles)
+    extracted = extract_text(deduped_articles)
     vectorized = vectorize_articles(extracted)
     clusters = cluster_articles(vectorized)
     summarized = summarize_clusters(clusters)
+    save_to_db(summarized)
 
     return summarized
 
