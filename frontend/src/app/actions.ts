@@ -39,12 +39,16 @@ function extractSource(url: string): string {
 }
 
 export async function getSummariesByDate(dateStr: string): Promise<Summary[]> {
-  const date = new Date(dateStr);
-  const startOfDay = new Date(date);
-  startOfDay.setHours(0, 0, 0, 0);
+  // User selects a news date (e.g., Jan 20), but summaries for that day
+  // are processed the next day (Jan 21), so we query for processed_at = selectedDate + 1 day
+  const selectedDate = new Date(dateStr);
 
-  const endOfDay = new Date(date);
-  endOfDay.setHours(23, 59, 59, 999);
+  const processedStart = new Date(selectedDate);
+  processedStart.setDate(processedStart.getDate() + 1);
+  processedStart.setHours(0, 0, 0, 0);
+
+  const processedEnd = new Date(processedStart);
+  processedEnd.setHours(23, 59, 59, 999);
 
   const result = await pool.query(
     `SELECT
@@ -68,7 +72,7 @@ export async function getSummariesByDate(dateStr: string): Promise<Summary[]> {
     WHERE s.processed_at >= $1 AND s.processed_at <= $2
     GROUP BY s.id, s.summary, s.cluster_id, s.processed_at
     ORDER BY s.processed_at DESC`,
-    [startOfDay.toISOString(), endOfDay.toISOString()]
+    [processedStart.toISOString(), processedEnd.toISOString()]
   );
 
   return result.rows.map((row) => ({
@@ -83,8 +87,9 @@ export async function getSummariesByDate(dateStr: string): Promise<Summary[]> {
 }
 
 export async function getAvailableDates(): Promise<string[]> {
+  // Return the news dates (processed_at - 1 day) since summaries are processed the day after
   const result = await pool.query(
-    `SELECT DISTINCT DATE(processed_at) as date
+    `SELECT DISTINCT DATE(processed_at - INTERVAL '1 day') as date
      FROM summaries
      ORDER BY date DESC`
   );
