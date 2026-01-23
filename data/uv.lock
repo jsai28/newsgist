@@ -257,11 +257,11 @@ name = "common"
 version = "0.1.0"
 source = { virtual = "common" }
 dependencies = [
-    { name = "cowsay" },
+    { name = "psycopg2-binary" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "cowsay", specifier = ">=6.1" }]
+requires-dist = [{ name = "psycopg2-binary", specifier = ">=2.9.0" }]
 
 [[package]]
 name = "coolname"
@@ -270,14 +270,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/c5/c6/1eaa4495ff4640e80d9af64f540e427ba1596a20f735d4c4750fe0386d07/coolname-2.2.0.tar.gz", hash = "sha256:6c5d5731759104479e7ca195a9b64f7900ac5bead40183c09323c7d0be9e75c7", size = 59006 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/1b/b1/5745d7523d8ce53b87779f46ef6cf5c5c342997939c2fe967e607b944e43/coolname-2.2.0-py2.py3-none-any.whl", hash = "sha256:4d1563186cfaf71b394d5df4c744f8c41303b6846413645e31d31915cdeb13e8", size = 37849 },
-]
-
-[[package]]
-name = "cowsay"
-version = "6.1"
-source = { registry = "https://pypi.org/simple" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/f1/13/63c0a02c44024ee16f664e0b36eefeb22d54e93531630bd99e237986f534/cowsay-6.1-py3-none-any.whl", hash = "sha256:274b1e6fc1b966d53976333eb90ac94cb07a450a700b455af9fbdf882244b30a", size = 25560 },
 ]
 
 [[package]]

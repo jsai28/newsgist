@@ -10,8 +10,7 @@ import random
 from collections import defaultdict
 from google import genai
 from prefect.blocks.system import Secret
-import psycopg2
-from psycopg2.extras import Json
+from common.db import get_cursor, upsert_many
 
 SOURCES = [
     'cbc.ca',
@@ -226,34 +225,30 @@ def summarize_clusters(clusters: dict[str, dict], max_clusters: int = 10) -> lis
 def save_to_db(summaries: list) -> None:
     logger = get_run_logger()
 
-    conn_string = Secret.load("neon-connection-string").get()
-    conn = psycopg2.connect(conn_string)
-    cur = conn.cursor()
-
-    for summary in summaries:
-        cur.execute(
-            """
-            INSERT INTO summaries (summary, cluster_id)
-            VALUES (%s, %s)
-            RETURNING id
-            """,
-            (summary["summary"], summary["cluster_id"])
-        )
-        summary_id = cur.fetchone()[0]
-
-        for article in summary["sampled_articles"]:
+    with get_cursor() as cur:
+        for summary in summaries:
             cur.execute(
                 """
-                INSERT INTO articles (url, title, date, summary_id)
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT (url) DO UPDATE SET summary_id = %s
+                INSERT INTO summaries (summary, cluster_id)
+                VALUES (%s, %s)
+                RETURNING id
                 """,
-                (article["url"], article["title"], article.get("publish_date"), summary_id, summary_id)
+                (summary["summary"], summary["cluster_id"])
             )
+            summary_id = cur.fetchone()[0]
 
-    conn.commit()
-    cur.close()
-    conn.close()
+            articles_data = [
+                (a["url"], a["title"], a.get("publish_date"), summary_id)
+                for a in summary["sampled_articles"]
+            ]
+            upsert_many(
+                cur,
+                "articles",
+                ["url", "title", "date", "summary_id"],
+                articles_data,
+                conflict_column="url",
+                update_columns=["summary_id"],
+            )
 
     logger.info(f"Saved {len(summaries)} summaries to database")
 
