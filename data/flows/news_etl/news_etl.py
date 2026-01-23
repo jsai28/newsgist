@@ -96,9 +96,10 @@ def deduplicate_articles(articles: list) -> list:
     seen = set()
     unique = []
     for a in articles:
-        if a.get("url") not in seen:
+        if a.get("url") not in seen or a['title'] not in seen:
             unique.append(a)
             seen.add(a['url'])
+            seen.add(a['title'])
 
     logger.info(f"Fetched {len(unique)} unique articles ({len(articles) - len(unique)} duplicates removed)")
     return unique
