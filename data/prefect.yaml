@@ -22,7 +22,9 @@ deployments:
           tag: latest
           buildargs:
             FLOW_NAME: news_etl
-    schedules: []
+    schedules:
+      - cron: "0 1 * * *"
+        timezone: "America/Edmonton"
     parameters: {}
     tags:
       - news

@@ -1,4 +1,6 @@
 from prefect import flow, task, get_run_logger
+from prefect.cache_policies import INPUTS
+from prefect.context import get_run_context
 from datetime import datetime, timedelta
 import re
 import requests
@@ -58,13 +60,17 @@ def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVE
     return chunks
 
 
-@task(retries=2, log_prints=True)
-def fetch_gdelt_articles(max_records: int = 250) -> dict:
+@task(retries=2, log_prints=True, cache_policy=INPUTS)
+def fetch_gdelt_articles(date_str: str | None = None, max_records: int = 250) -> dict:
     logger = get_run_logger()
 
-    yesterday = datetime.now() - timedelta(days=1)
-    start_datetime = yesterday.strftime("%Y%m%d") + "000000"
-    end_datetime = yesterday.strftime("%Y%m%d") + "235959"
+    if date_str:
+        target_date = datetime.strptime(date_str, "%Y-%m-%d")
+    else:
+        target_date = datetime.now() - timedelta(days=1)
+
+    start_datetime = target_date.strftime("%Y%m%d") + "000000"
+    end_datetime = target_date.strftime("%Y%m%d") + "235959"
 
     domain_query = " OR ".join([f"domain:{source}" for source in SOURCES])
     query = f"({domain_query})"
@@ -78,7 +84,7 @@ def fetch_gdelt_articles(max_records: int = 250) -> dict:
         "maxrecords": max_records
     }
 
-    logger.info(f"Fetching articles from {yesterday.strftime('%Y-%m-%d')}")
+    logger.info(f"Fetching articles from {target_date.strftime('%Y-%m-%d')}")
     logger.info(f"Sources: {SOURCES}")
 
     response = requests.get(GDELT_BASE_URL, params=params)
@@ -89,7 +95,7 @@ def fetch_gdelt_articles(max_records: int = 250) -> dict:
     return articles
 
 
-@task(retries=2, log_prints=True)
+@task(retries=2, log_prints=True, cache_policy=INPUTS)
 def deduplicate_articles(articles: list) -> list:
     logger = get_run_logger()
     seen = set()
@@ -104,7 +110,7 @@ def deduplicate_articles(articles: list) -> list:
     return unique
 
 
-@task(retries=2, log_prints=True)
+@task(retries=2, log_prints=True, cache_policy=INPUTS)
 def extract_text(articles: list) -> list[dict]:
     logger = get_run_logger()
     results = []
@@ -134,7 +140,7 @@ def extract_text(articles: list) -> list[dict]:
     return results
 
 
-@task(retries=2, log_prints=True)
+@task(retries=2, log_prints=True, cache_policy=INPUTS)
 def vectorize_articles(articles: list[dict], model_name: str = "all-MiniLM-L6-v2") -> list[dict]:
     logger = get_run_logger()
 
@@ -164,7 +170,7 @@ def vectorize_articles(articles: list[dict], model_name: str = "all-MiniLM-L6-v2
     return articles
 
 
-@task(retries=2, log_prints=True)
+@task(retries=2, log_prints=True, cache_policy=INPUTS)
 def cluster_articles(articles: list[dict]) -> dict[str, dict]:
     embeddings = np.array([article["embedding"] for article in articles])
     cluster_algo = HDBSCAN(min_cluster_size=MIN_CLUSTER_SIZE, metric='cosine')
@@ -177,7 +183,7 @@ def cluster_articles(articles: list[dict]) -> dict[str, dict]:
     return clusters
 
 
-@task(retries=2, log_prints=True)
+@task(retries=2, log_prints=True, cache_policy=INPUTS)
 def summarize_clusters(clusters: dict[str, dict], max_clusters: int = 10) -> list:
     logger = get_run_logger()
 
@@ -257,7 +263,16 @@ def save_to_db(summaries: list) -> None:
 def news_etl():
     logger = get_run_logger()
 
-    articles = fetch_gdelt_articles()
+    ctx = get_run_context()
+    if ctx.flow_run.expected_start_time:
+        run_date = ctx.flow_run.expected_start_time
+    else:
+        run_date = datetime.now()
+
+    news_date = (run_date - timedelta(days=1)).strftime("%Y-%m-%d")
+    logger.info(f"Processing news for {news_date}")
+
+    articles = fetch_gdelt_articles(date_str=news_date)
     deduped_articles = deduplicate_articles(articles)
     extracted = extract_text(deduped_articles)
     vectorized = vectorize_articles(extracted)
@@ -266,7 +281,3 @@ def news_etl():
     save_to_db(summarized)
 
     return summarized
-
-
-if __name__ == "__main__":
-    news_etl()
