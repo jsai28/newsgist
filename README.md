@@ -4,13 +4,14 @@ A news aggregation and summarization pipeline that fetches articles from Canadia
 
 ## Overview
 
-Newsgest uses a data pipeline orchestrated by Prefect to:
+Newsgist uses a data pipeline orchestrated by Prefect to:
 
 1. Fetch headlines from GDELT (news data provider)
-2. Extract full article content
-3. Generate embeddings using SentenceTransformers
-4. Cluster similar articles using HDBSCAN
-5. Summarize clusters using Google Gemini AI
+2. Deduplicate articles by URL and title
+3. Extract full article content
+4. Generate embeddings using SentenceTransformers
+5. Cluster similar articles using HDBSCAN
+6. Summarize clusters using Google Gemini AI
 
 ## Tech Stack
 
@@ -19,6 +20,7 @@ Newsgest uses a data pipeline orchestrated by Prefect to:
 - **Docker** for containerization
 - **sentence-transformers** for embeddings
 - **Google Gemini** for summarization
+- **Nextjs** frontend
 
 ### Running Locally
 
@@ -31,10 +33,11 @@ cd data
 
 # Build and start Prefect infrastructure
 make build
+make start
 
 # Deploy the flow
 make deploy-local
 
-# Start the worker
-make start
+# Navigate to /frontend
+npm run dev
 ```
