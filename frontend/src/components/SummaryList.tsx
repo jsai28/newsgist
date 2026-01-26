@@ -15,7 +15,7 @@ interface Summary {
   id: number;
   summary: string;
   cluster_id: number;
-  processed_at: string;
+  publish_date: string;
   articles: Article[];
 }
 
