@@ -25,7 +25,8 @@ deployments:
     schedules:
       - cron: "0 1 * * *"
         timezone: "America/Edmonton"
-    parameters: {}
+    parameters:
+      run_date: "{{ (scheduled_start_time - timedelta(days=1)).strftime('%Y-%m-%d') }}"
     tags:
       - news
       - etl

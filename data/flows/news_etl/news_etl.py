@@ -1,6 +1,4 @@
 from prefect import flow, task, get_run_logger
-from prefect.cache_policies import INPUTS
-from prefect.context import get_run_context
 from datetime import datetime, timedelta
 import re
 import requests
@@ -27,7 +25,7 @@ GDELT_BASE_URL = "https://api.gdeltproject.org/api/v2/doc/doc"
 CHUNK_SIZE = 250
 CHUNK_OVERLAP = 2 # 2 sentence overlap
 
-MIN_CLUSTER_SIZE = 3
+MIN_CLUSTER_SIZE = 5
 
 
 def split_sentences(text: str) -> list[str]:
@@ -60,14 +58,11 @@ def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVE
     return chunks
 
 
-@task(retries=2, log_prints=True, cache_policy=INPUTS)
-def fetch_gdelt_articles(date_str: str | None = None, max_records: int = 250) -> dict:
+@task(retries=2, log_prints=True)
+def fetch_gdelt_articles(date_str: str, max_records: int = 250) -> dict:
     logger = get_run_logger()
 
-    if date_str:
-        target_date = datetime.strptime(date_str, "%Y-%m-%d")
-    else:
-        target_date = datetime.now() - timedelta(days=1)
+    target_date = datetime.strptime(date_str, "%Y-%m-%d")
 
     start_datetime = target_date.strftime("%Y%m%d") + "000000"
     end_datetime = target_date.strftime("%Y%m%d") + "235959"
@@ -95,22 +90,22 @@ def fetch_gdelt_articles(date_str: str | None = None, max_records: int = 250) ->
     return articles
 
 
-@task(retries=2, log_prints=True, cache_policy=INPUTS)
+@task(retries=2, log_prints=True)
 def deduplicate_articles(articles: list) -> list:
     logger = get_run_logger()
     seen = set()
     unique = []
     for a in articles:
-        if a.get("url") not in seen or a['title'] not in seen:
+        if a.get("url") not in seen and a.get("title") not in seen:
             unique.append(a)
-            seen.add(a['url'])
-            seen.add(a['title'])
+            seen.add(a["url"])
+            seen.add(a["title"])
 
     logger.info(f"Fetched {len(unique)} unique articles ({len(articles) - len(unique)} duplicates removed)")
     return unique
 
 
-@task(retries=2, log_prints=True, cache_policy=INPUTS)
+@task(retries=2, log_prints=True)
 def extract_text(articles: list) -> list[dict]:
     logger = get_run_logger()
     results = []
@@ -124,6 +119,10 @@ def extract_text(articles: list) -> list[dict]:
             article = Article(url)
             article.download()
             article.parse()
+
+            if not article.text or not article.title:
+                logger.warning(f"Skipping {url}: missing title or text")
+                continue
 
             results.append({
                 "url": url,
@@ -140,7 +139,7 @@ def extract_text(articles: list) -> list[dict]:
     return results
 
 
-@task(retries=2, log_prints=True, cache_policy=INPUTS)
+@task(retries=2, log_prints=True)
 def vectorize_articles(articles: list[dict], model_name: str = "all-MiniLM-L6-v2") -> list[dict]:
     logger = get_run_logger()
 
@@ -170,7 +169,7 @@ def vectorize_articles(articles: list[dict], model_name: str = "all-MiniLM-L6-v2
     return articles
 
 
-@task(retries=2, log_prints=True, cache_policy=INPUTS)
+@task(retries=2, log_prints=True)
 def cluster_articles(articles: list[dict]) -> dict[str, dict]:
     embeddings = np.array([article["embedding"] for article in articles])
     cluster_algo = HDBSCAN(min_cluster_size=MIN_CLUSTER_SIZE, metric='cosine')
@@ -183,7 +182,7 @@ def cluster_articles(articles: list[dict]) -> dict[str, dict]:
     return clusters
 
 
-@task(retries=2, log_prints=True, cache_policy=INPUTS)
+@task(retries=2, log_prints=True)
 def summarize_clusters(clusters: dict[str, dict], max_clusters: int = 10) -> list:
     logger = get_run_logger()
 
@@ -206,10 +205,12 @@ def summarize_clusters(clusters: dict[str, dict], max_clusters: int = 10) -> lis
             for a in articles_sample
         ])
 
-        prompt = f"""Summarize these news articles into a single cohesive paragraph.
-                    Keep it to 2-4 sentences.
-                    {articles_text}
-                    """
+        prompt = f"""These articles are about similar news stories. Summarize the key points into exactly 3-4 bullet points that cover the entire story, not individual articles.
+Return only plain text bullet points, one per line, starting with a dash (-).
+Do not add extra formatting.
+
+{articles_text}
+"""
 
         response = client.models.generate_content(
             model="gemini-2.5-flash-lite",
@@ -228,18 +229,18 @@ def summarize_clusters(clusters: dict[str, dict], max_clusters: int = 10) -> lis
 
 
 @task(retries=2, log_prints=True)
-def save_to_db(summaries: list) -> None:
+def save_to_db(summaries: list, publish_date: str) -> None:
     logger = get_run_logger()
 
     with get_cursor() as cur:
         for summary in summaries:
             cur.execute(
                 """
-                INSERT INTO summaries (summary, cluster_id)
-                VALUES (%s, %s)
+                INSERT INTO summaries (summary, cluster_id, publish_date)
+                VALUES (%s, %s, %s)
                 RETURNING id
                 """,
-                (summary["summary"], summary["cluster_id"])
+                (summary["summary"], summary["cluster_id"], publish_date)
             )
             summary_id = cur.fetchone()[0]
 
@@ -260,24 +261,16 @@ def save_to_db(summaries: list) -> None:
 
 
 @flow(name="news_etl", log_prints=True)
-def news_etl():
+def news_etl(run_date: str):
     logger = get_run_logger()
+    logger.info(f"Processing news for {run_date}")
 
-    ctx = get_run_context()
-    if ctx.flow_run.expected_start_time:
-        run_date = ctx.flow_run.expected_start_time
-    else:
-        run_date = datetime.now()
-
-    news_date = (run_date - timedelta(days=1)).strftime("%Y-%m-%d")
-    logger.info(f"Processing news for {news_date}")
-
-    articles = fetch_gdelt_articles(date_str=news_date)
+    articles = fetch_gdelt_articles(date_str=run_date)
     deduped_articles = deduplicate_articles(articles)
     extracted = extract_text(deduped_articles)
     vectorized = vectorize_articles(extracted)
     clusters = cluster_articles(vectorized)
     summarized = summarize_clusters(clusters)
-    save_to_db(summarized)
+    save_to_db(summarized, run_date)
 
     return summarized

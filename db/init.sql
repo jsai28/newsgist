@@ -2,7 +2,8 @@ CREATE TABLE IF NOT EXISTS summaries (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   summary TEXT,
   cluster_id INT,
-  processed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  processed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  publish_date DATE
 );
 
 CREATE TABLE IF NOT EXISTS articles (
@@ -14,5 +15,5 @@ CREATE TABLE IF NOT EXISTS articles (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_summaries_processed_at ON summaries(processed_at);
+CREATE INDEX idx_summaries_publish_date ON summaries(publish_date);
 CREATE INDEX idx_articles_summary_id ON articles(summary_id);

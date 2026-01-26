@@ -50,9 +50,14 @@ export default function SummaryCard({
             {index + 1}
           </span>
           <div className="flex-1 min-w-0">
-            <p className="text-gray-800 text-base leading-relaxed">
-              {summary}
-            </p>
+            <ul className="text-gray-800 text-base leading-relaxed space-y-2">
+              {summary.split('\n').filter(line => line.trim()).map((line, i) => (
+                <li key={i} className="flex items-start gap-2">
+                  <span className="text-gray-400 mt-0.5">•</span>
+                  <span>{line.replace(/^-\s*/, '')}</span>
+                </li>
+              ))}
+            </ul>
 
             <div className="mt-4 flex flex-wrap items-center gap-2">
               {uniqueSources.map((source) => (

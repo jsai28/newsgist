@@ -49,7 +49,7 @@ export default function Home() {
               </svg>
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">NewsGist</h1>
+              <h1 className="text-2xl font-bold text-gray-900">NewsGist (under development)</h1>
               <p className="text-sm text-gray-500">
                 Daily Canadian news summaries
               </p>
