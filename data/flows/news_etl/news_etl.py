@@ -261,8 +261,10 @@ def save_to_db(summaries: list, publish_date: str) -> None:
 
 
 @flow(name="news_etl", log_prints=True)
-def news_etl(run_date: str):
+def news_etl(run_date: str | None = None):
     logger = get_run_logger()
+    if run_date is None:
+        run_date = datetime.now().strftime("%Y-%m-%d")
     logger.info(f"Processing news for {run_date}")
 
     articles = fetch_gdelt_articles(date_str=run_date)

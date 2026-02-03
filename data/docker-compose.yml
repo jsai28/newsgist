@@ -17,7 +17,7 @@ services:
 
   server:
     container_name: prefect-server
-    image: prefecthq/prefect:3-latest
+    image: prefecthq/prefect:3.6.7-python3.13
     restart: always
     command: prefect server start --host 0.0.0.0
     environment:
@@ -30,7 +30,7 @@ services:
 
   worker:
     container_name: prefect-worker
-    image: prefecthq/prefect:3-latest
+    image: prefecthq/prefect:3.6.7-python3.13
     restart: always
     entrypoint: ["/bin/sh", "-c"]
     command: >
