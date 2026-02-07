@@ -23,7 +23,7 @@ deployments:
           buildargs:
             FLOW_NAME: news_etl
     schedules:
-      - cron: "0 23 * * *"
+      - cron: "0 1 * * *"
         timezone: "America/Edmonton"
     parameters:
       run_date: null

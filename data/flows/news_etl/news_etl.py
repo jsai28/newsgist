@@ -1,6 +1,5 @@
 from prefect import flow, task, get_run_logger
 from datetime import datetime, timedelta
-import re
 import requests
 from newspaper import Article
 from sentence_transformers import SentenceTransformer
@@ -11,6 +10,7 @@ from collections import defaultdict
 from google import genai
 from prefect.blocks.system import Secret
 from common.db import get_cursor, upsert_many
+from common.text import chunk_text
 
 SOURCES = [
     'cbc.ca',
@@ -22,40 +22,7 @@ SOURCES = [
 
 GDELT_BASE_URL = "https://api.gdeltproject.org/api/v2/doc/doc"
 
-CHUNK_SIZE = 250
-CHUNK_OVERLAP = 2 # 2 sentence overlap
-
-MIN_CLUSTER_SIZE = 5
-
-
-def split_sentences(text: str) -> list[str]:
-    """LLM Generated function for splitting sentences."""
-    pattern = r'(?<=[.!?])\s+'
-    sentences = re.split(pattern, text)
-    return [s.strip() for s in sentences if s.strip()]
-
-
-def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> list[str]:
-    if len(text) <= chunk_size:
-        return [text]
-
-    sentences = split_sentences(text)
-
-    chunks = []
-    cur_chunk = []
-    cur_word_count = 0
-    for s in sentences:
-        words = s.split()
-        if cur_word_count + len(words) > chunk_size and cur_chunk:
-            chunks.append(" ".join(cur_chunk))
-            cur_chunk = cur_chunk[-overlap:]
-            cur_word_count = sum(len(sent.split()) for sent in cur_chunk)
-        cur_chunk.append(s)
-        cur_word_count += len(words)
-
-    if cur_chunk:
-        chunks.append(" ".join(cur_chunk))
-    return chunks
+MIN_CLUSTER_SIZE = 4
 
 
 @task(retries=2, log_prints=True)
@@ -63,7 +30,6 @@ def fetch_gdelt_articles(date_str: str, max_records: int = 250) -> dict:
     logger = get_run_logger()
 
     target_date = datetime.strptime(date_str, "%Y-%m-%d")
-
     start_datetime = target_date.strftime("%Y%m%d") + "000000"
     end_datetime = target_date.strftime("%Y%m%d") + "235959"
 
@@ -264,7 +230,7 @@ def save_to_db(summaries: list, publish_date: str) -> None:
 def news_etl(run_date: str | None = None):
     logger = get_run_logger()
     if run_date is None:
-        run_date = datetime.now().strftime("%Y-%m-%d")
+        run_date = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
     logger.info(f"Processing news for {run_date}")
 
     articles = fetch_gdelt_articles(date_str=run_date)
